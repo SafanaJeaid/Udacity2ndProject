@@ -62,7 +62,7 @@ Resources:
             VpcId: !Ref VPC
             AvailabilityZone: !Select [ 0, !GetAZs '' ]
             CidrBlock: !Ref PublicSubnet1CIDR
-            MapPublicIpOnLaunch: true
+            MapPublicIpOnLaunch: false
             Tags: 
                 - Key: Name 
                   Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
@@ -73,7 +73,7 @@ Resources:
             VpcId: !Ref VPC
             AvailabilityZone: !Select [ 1, !GetAZs '' ]
             CidrBlock: !Ref PublicSubnet2CIDR
-            MapPublicIpOnLaunch: true
+            MapPublicIpOnLaunch: false
             Tags: 
                 - Key: Name 
                   Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
@@ -259,8 +259,6 @@ Resources:
         Properties:
           GroupDescription: Allow http to our hosts and SSH from local only
           VpcId: !Ref VPC
-           # Fn::ImportValue:
-            #  !Sub "${EnvironmentName}-VPCID"
           SecurityGroupIngress:
           - IpProtocol: tcp
             FromPort: 80
@@ -291,8 +289,7 @@ Resources:
               aws s3 cp s3://udacity-demo-1/udacity.zip .   
               unzip -o udacity.zip       
           #ImageId: ami-00ddb0e5626798373
-          ImageId: ami-0b0ea68c435eb488d
-          KeyName: saf2ndpro
+          ImageId: ami-0ac73f33a1888c64a
           IamInstanceProfile: !Ref ProfileWithRolesForOurApp
           SecurityGroups:
           - Ref: WebServerSecGroup
@@ -302,6 +299,20 @@ Resources:
             Ebs:
               VolumeSize: '10'
 
+    WebAppTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+          HealthCheckIntervalSeconds: 10
+          HealthCheckPath: /
+          HealthCheckProtocol: HTTP
+          HealthCheckTimeoutSeconds: 8
+          HealthyThresholdCount: 2
+          Port: 80
+          Protocol: HTTP
+          UnhealthyThresholdCount: 5
+          VpcId: !Ref VPC
+            #Fn::ImportValue:
+              #Fn::Sub: "${EnvironmentName}-VPCID"
     WebAppGroup:
         Type: AWS::AutoScaling::AutoScalingGroup
         Properties:
@@ -313,7 +324,7 @@ Resources:
           LaunchConfigurationName:
             Ref: WebAppLaunchConfig
           MinSize: '4'
-          MaxSize: '5'
+          MaxSize: '6'
           TargetGroupARNs:
           - Ref: WebAppTargetGroup
 
@@ -349,21 +360,6 @@ Resources:
               Values: [/]
             ListenerArn: !Ref 'Listener'
             Priority: 1
-
-    WebAppTargetGroup:
-        Type: AWS::ElasticLoadBalancingV2::TargetGroup
-        Properties:
-          HealthCheckIntervalSeconds: 10
-          HealthCheckPath: /
-          HealthCheckProtocol: HTTP
-          HealthCheckTimeoutSeconds: 8
-          HealthyThresholdCount: 2
-          Port: 80
-          Protocol: HTTP
-          UnhealthyThresholdCount: 5
-          VpcId: !Ref VPC
-            #Fn::ImportValue:
-              #Fn::Sub: "${EnvironmentName}-VPCID"
 
 Outputs: 
 
