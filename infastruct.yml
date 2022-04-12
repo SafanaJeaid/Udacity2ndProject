@@ -240,9 +240,9 @@ Resources:
         Type: AWS::EC2::SecurityGroup
         Properties:
           GroupDescription: Allow http to our load balancer
-          VpcId:
-            Fn::ImportValue:
-              !Sub "${EnvironmentName}-VPCID"
+          VpcId: !Ref VPC
+            #Fn::ImportValue:
+              #!Sub "${EnvironmentName}-VPCID"
           SecurityGroupIngress:
           - IpProtocol: tcp
             FromPort: 80
@@ -258,9 +258,9 @@ Resources:
         Type: AWS::EC2::SecurityGroup
         Properties:
           GroupDescription: Allow http to our hosts and SSH from local only
-          VpcId:
-            Fn::ImportValue:
-              !Sub "${EnvironmentName}-VPCID"
+          VpcId: !Ref VPC
+           # Fn::ImportValue:
+            #  !Sub "${EnvironmentName}-VPCID"
           SecurityGroupIngress:
           - IpProtocol: tcp
             FromPort: 80
@@ -290,7 +290,8 @@ Resources:
               cd /var/www/html
               aws s3 cp s3://udacity-demo-1/udacity.zip .   
               unzip -o udacity.zip       
-          ImageId: ami-00ddb0e5626798373
+          #ImageId: ami-00ddb0e5626798373
+          ImageId: ami-0b0ea68c435eb488d
           KeyName: saf2ndpro
           IamInstanceProfile: !Ref ProfileWithRolesForOurApp
           SecurityGroups:
@@ -305,14 +306,14 @@ Resources:
         Type: AWS::AutoScaling::AutoScalingGroup
         Properties:
           VPCZoneIdentifier:
-          - Fn::ImportValue: 
-              !Sub "${EnvironmentName}-PRIV-NETS"
-          #  - !Ref PrivateSubnet1
-           # - !Ref PrivateSubnet2 
+          #- Fn::ImportValue: 
+           #   !Sub "${EnvironmentName}-PRIV-NETS"
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2 
           LaunchConfigurationName:
             Ref: WebAppLaunchConfig
           MinSize: '4'
-          MaxSize: '6'
+          MaxSize: '5'
           TargetGroupARNs:
           - Ref: WebAppTargetGroup
 
@@ -360,9 +361,9 @@ Resources:
           Port: 80
           Protocol: HTTP
           UnhealthyThresholdCount: 5
-          VpcId: 
-            Fn::ImportValue:
-              Fn::Sub: "${EnvironmentName}-VPCID"
+          VpcId: !Ref VPC
+            #Fn::ImportValue:
+              #Fn::Sub: "${EnvironmentName}-VPCID"
 
 Outputs: 
 
