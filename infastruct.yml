@@ -38,6 +38,7 @@ Resources:
         Type: AWS::EC2::VPC
         Properties:
             CidrBlock: !Ref VpcCIDR
+            EnableDnsSupport: true
             EnableDnsHostnames: true
             Tags: 
                 - Key: Name 
@@ -45,10 +46,10 @@ Resources:
             
     InternetGateway:
         Type: AWS::EC2::InternetGateway
-        #Properties:
-         #   Tags:
-          #      - Key: Name
-           #       Value: !Ref EnvironmentName
+        Properties:
+            Tags:
+                - Key: Name
+                  Value: !Ref EnvironmentName
             
     InternetGatewayAttachment:
         Type: AWS::EC2::VPCGatewayAttachment
@@ -195,20 +196,20 @@ Resources:
             RouteTableId: !Ref PrivateRouteTable2
             SubnetId: !Ref PrivateSubnet2
 
-    UdacityS3ReadOnlyEC2: 
-        Type: "AWS::IAM::Role"
+    UdacityS3ReadOnlyEC2:
+        Type: AWS::IAM::Role
         Properties:
             RoleName: 
-              !Sub ${EnvironmentName}-Role
+                !Sub ${EnvironmentName}-Role
             AssumeRolePolicyDocument:
-              Version: "2012-10-17"
-              Statement:
-                - Effect: Allow
-                  Principal:
-                    Service:
-                      - ec2.amazonaws.com
-                  Action:
-                    - 'sts:AssumeRole'
+                Version: "2012-10-17"
+                Statement:
+                -   Effect: Allow
+                    Principal:
+                        Service:
+                        - ec2.amazonaws.com
+                    Action:
+                    - sts:AssumeRole
             Path: "/"
 
     RolePolicies:
@@ -218,7 +219,7 @@ Resources:
             PolicyDocument:
                 Version: '2012-10-17'
                 Statement:
-                -
+                - 
                     Effect: Allow
                     Action: 
                     -   s3:Get*
@@ -279,16 +280,16 @@ Resources:
         Properties:
           UserData:
             Fn::Base64: !Sub |
-
                     #!/bin/bash
                     apt-get update -y
                     apt-get install unzip awscli -y
                     apt-get install apache2 -y
-                    systemctl start apache2.service
                     cd /var/www/html
                     aws s3 cp s3://udacity-demo-1/udacity.zip .
                     unzip -o udacity.zip
-          ImageId: ami-0ac73f33a1888c64a
+                    systemctl start apache2.service
+          ImageId: ami-06d51e91cea0dac8d
+          #ImageId: ami-074251216af698218
           IamInstanceProfile: !Ref ProfileWithRolesForOurApp
           SecurityGroups:
           - Ref: WebServerSecGroup
@@ -301,7 +302,7 @@ Resources:
     WebAppTargetGroup:
         Type: AWS::ElasticLoadBalancingV2::TargetGroup
         Properties:
-          HealthCheckIntervalSeconds: 10
+          HealthCheckIntervalSeconds: 30
           HealthCheckPath: /
           HealthCheckProtocol: HTTP
           HealthCheckTimeoutSeconds: 8
@@ -316,27 +317,25 @@ Resources:
         Type: AWS::AutoScaling::AutoScalingGroup
         Properties:
           VPCZoneIdentifier:
-          #- Fn::ImportValue: 
-           #   !Sub "${EnvironmentName}-PRIV-NETS"
             - !Ref PrivateSubnet1
             - !Ref PrivateSubnet2 
           LaunchConfigurationName:
             Ref: WebAppLaunchConfig
-          MinSize: '4'
-          MaxSize: '6'
+          MinSize: '3'
+          MaxSize: '5'
           TargetGroupARNs:
           - Ref: WebAppTargetGroup
 
     WebAppLB:
         Type: AWS::ElasticLoadBalancingV2::LoadBalancer
         Properties:
-          SecurityGroups:
-          - Ref: LBSecGroup
+         # SecurityGroups:
+          #- Ref: LBSecGroup
           Subnets:
           - !Ref PublicSubnet1
           - !Ref PublicSubnet2
-          #SecurityGroups:
-          #- Ref: LBSecGroup
+          SecurityGroups:
+          - Ref: LBSecGroup
 
     Listener:
         Type: AWS::ElasticLoadBalancingV2::Listener
@@ -381,3 +380,9 @@ Outputs:
         Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]]
         Export:
           Name: !Sub ${EnvironmentName}-PRIV-NETS
+
+    WebAppLoadBalancerDNSName:
+        Description: DNS name or Public URL of the Load Balancer
+        Value: !Join [ "", [ 'http://', !GetAtt WebAppLB.DNSName ]]
+        Export:
+            Name: !Sub ${EnvironmentName}-LB-DNSName
